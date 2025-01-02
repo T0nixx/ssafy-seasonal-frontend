@@ -2,47 +2,35 @@ const chatContainer = document.getElementById("chat-container");
 const messageForm = document.getElementById("message-form");
 const userInput = document.getElementById("user-input");
 
-// JSON 데이터 파일 경로
-const datasetPath = "./qa_dataset_full.json"; 
+// We'll read the API endpoint from an environment variable
+const BASE_URL = process.env.API_ENDPOINT;
+// This will be replaced at build time by Parcel with the appropriate value
+// from the corresponding .env file.
 
-let qaDataset = [];
-
-// JSON 데이터 로드
-async function loadDataset() {
-  try {
-    const response = await fetch(datasetPath);
-    if (!response.ok) {
-      throw new Error(`Failed to load dataset: ${response.statusText}`);
-    }
-    qaDataset = await response.json();
-    console.log("Dataset loaded successfully:", qaDataset);
-  } catch (error) {
-    console.error("Error loading dataset:", error);
-  }
-}
-
-// Create a message bubble
 function createMessageBubble(content, sender = "user") {
   const wrapper = document.createElement("div");
-
-  if (sender === "user") {
-    wrapper.classList.add("mb-6", "flex", "items-start", "space-x-3", "flex-row-reverse");
-  } else {
-    wrapper.classList.add("mb-6", "flex", "items-start", "space-x-3");
-  }
+  wrapper.classList.add("mb-6", "flex", "items-start", "space-x-3");
 
   const avatar = document.createElement("div");
-  avatar.classList.add("w-10", "h-10", "rounded-full", "flex-shrink-0", "ml-3");
-
-  const avatarImg = document.createElement("img");
-  avatarImg.classList.add("w-full", "h-full", "rounded-full", "object-cover");
+  avatar.classList.add(
+    "w-10",
+    "h-10",
+    "rounded-full",
+    "flex-shrink-0",
+    "flex",
+    "items-center",
+    "justify-center",
+    "font-bold",
+    "text-white"
+  );
 
   if (sender === "assistant") {
-    avatarImg.src = "./img/Assistant.png"; 
+    avatar.classList.add("bg-gradient-to-br", "from-green-400", "to-green-600");
+    avatar.textContent = "A";
   } else {
-    avatarImg.src = "./img/User.png"; 
-
-  avatar.appendChild(avatarImg);
+    avatar.classList.add("bg-gradient-to-br", "from-blue-500", "to-blue-700");
+    avatar.textContent = "U";
+  }
 
   const bubble = document.createElement("div");
   bubble.classList.add(
@@ -56,14 +44,9 @@ function createMessageBubble(content, sender = "user") {
   );
 
   if (sender === "assistant") {
-    bubble.classList.add("bg-white", "text-gray-800", "border", "border-gray-300"); 
+    bubble.classList.add("bg-gray-200", "text-gray-900");
   } else {
-    bubble.classList.add(
-      "bg-purple-500", 
-      "text-white", 
-      "border", 
-      "border-purple-600" 
-    );
+    bubble.classList.add("bg-blue-600", "text-white");
   }
 
   bubble.textContent = content;
@@ -73,48 +56,29 @@ function createMessageBubble(content, sender = "user") {
   return wrapper;
 }
 
-// Scroll to bottom
 function scrollToBottom() {
   chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-// 유사한 질문 찾기
-function calculateSimilarity(input, target) {
-  const inputWords = input.toLowerCase().split(/\s+/);
-  const targetWords = target.toLowerCase().split(/\s+/);
-  const commonWords = inputWords.filter(word => targetWords.includes(word));
-  return commonWords.length / Math.max(inputWords.length, targetWords.length);
-}
+async function getAssistantResponse(userMessage) {
+  const url = `${BASE_URL}/chat`;
 
-function findSimilarQuestion(userInput) {
-  let bestMatch = null;
-  let highestSimilarity = 0;
-
-  for (let item of qaDataset) {
-    const similarity = calculateSimilarity(userInput, item.question);
-    if (similarity > highestSimilarity) {
-      bestMatch = item;
-      highestSimilarity = similarity;
-    }
-  }
-
-  if (bestMatch && highestSimilarity >= 0.4) { // 유사도가 40% 이상인 경우에만 반환
-    return bestMatch.answer; // 답변만 반환
-  }
-  return "질문과 관련된 답변을 찾을 수 없습니다.";
-}
-
-// Simulate assistant response
-function getAssistantResponse(userMessage) {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const response = findSimilarQuestion(userMessage);
-      resolve(response);
-    }, 1500);
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ message: userMessage }),
   });
+
+  if (!response.ok) {
+    throw new Error("Network response was not ok");
+  }
+
+  const data = await response.json();
+  return data.reply.content;
 }
 
-// Handle form submission
 messageForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const message = userInput.value.trim();
@@ -124,16 +88,18 @@ messageForm.addEventListener("submit", async (e) => {
   userInput.value = "";
   scrollToBottom();
 
-  if (qaDataset.length === 0) {
-    chatContainer.appendChild(createMessageBubble("조금 더 명확한 질문을 부탁드립니다.", "assistant"));
+  try {
+    const response = await getAssistantResponse(message);
+    chatContainer.appendChild(createMessageBubble(response, "assistant"));
     scrollToBottom();
-    return;
+  } catch (error) {
+    console.error("Error fetching assistant response:", error);
+    chatContainer.appendChild(
+      createMessageBubble(
+        "Error fetching response. Check console.",
+        "assistant"
+      )
+    );
+    scrollToBottom();
   }
-
-  const response = await getAssistantResponse(message);
-  chatContainer.appendChild(createMessageBubble(response, "assistant"));
-  scrollToBottom();
 });
-
-// 페이지 로드 시 JSON 데이터 로드
-loadDataset();
