@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "rm -rf dist .parcel-cache && parcel serve index.html",
-    "build": "rm -rf dist .parcel-cache && NODE_ENV=production parcel build index.html --public-url .",
+    "copy-assets": "sh -c 'mkdir -p ./dist/img && cp -r ./img/* ./dist/img'",
+    "start": "rm -rf dist .parcel-cache && npm run copy-assets && parcel serve index.html",
+    "build": "rm -rf dist .parcel-cache && npm run copy-assets && NODE_ENV=production parcel build index.html --public-url .",
     "deploy": "gh-pages -d dist"
   },
   "keywords": [],

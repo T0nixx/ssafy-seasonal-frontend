@@ -24,13 +24,15 @@ function createMessageBubble(content, sender = "user") {
     "text-white"
   );
 
+  const avatarImg = document.createElement("img");
+  avatarImg.classList.add("w-full", "h-full", "rounded-full", "object-cover");
+
   if (sender === "assistant") {
-    avatar.classList.add("bg-gradient-to-br", "from-green-400", "to-green-600");
-    avatar.textContent = "A";
+    avatarImg.src = "./img/Assistant.png";
   } else {
-    avatar.classList.add("bg-gradient-to-br", "from-blue-500", "to-blue-700");
-    avatar.textContent = "U";
+    avatarImg.src = "./img/User.png";
   }
+  avatar.appendChild(avatarImg);
 
   const bubble = document.createElement("div");
   bubble.classList.add(
